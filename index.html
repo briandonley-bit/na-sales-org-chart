@@ -39,15 +39,15 @@ const BASE_ORG = {
           tl: { id: "tl-sw", name: "TBD", role: "Team Lead" },
           cities: [
             { id: "c-la", name: "LA", reps: [
-              { id: "r19", name: "Tri", role: "BDM" }, { id: "r20", name: "Valerie", role: "BDM" },
-              { id: "r21", name: "Shelby", role: "BDM" }, { id: "r22", name: "Alvin", role: "BDM" },
-              { id: "r23", name: "Lindsay", role: "BDM" }, { id: "r24", name: "Sean", role: "BDM" },
+              { id: "r19", name: "Tri", role: "BDM", tag: "green" }, { id: "r20", name: "Valerie", role: "BDM", tag: "green" },
+              { id: "r21", name: "Shelby", role: "BDM", tag: "green" }, { id: "r22", name: "Alvin", role: "BDM", tag: "green" },
+              { id: "r23", name: "Lindsay", role: "BDM", tag: "green" }, { id: "r24", name: "Sean", role: "BDM", tag: "green" },
             ]},
             { id: "c-sd", name: "San Diego", reps: [
-              { id: "r25", name: "Arty", role: "BDM" }, { id: "r26", name: "Maysen", role: "BDM" }, { id: "r27", name: "Angel", role: "BDM" },
+              { id: "r25", name: "Arty", role: "BDM", tag: "green" }, { id: "r26", name: "Maysen", role: "BDM", tag: "green" }, { id: "r27", name: "Angel", role: "BDM", tag: "green" },
             ]},
             { id: "c-sf", name: "San Francisco", reps: [
-              { id: "r28", name: "Aaron", role: "BDM" }, { id: "r29", name: "Christian", role: "BDM" },
+              { id: "r28", name: "Aaron", role: "BDM", tag: "green" }, { id: "r29", name: "Christian", role: "BDM", tag: "green" },
             ]},
           ]
         },
@@ -56,12 +56,12 @@ const BASE_ORG = {
           tl: { id: "tl-nw", name: "TBD", role: "Team Lead" },
           cities: [
             { id: "c-chicago", name: "Chicago", reps: [
-              { id: "r30", name: "Frankie", role: "BDM" }, { id: "r31", name: "Jessica", role: "BDM" }, { id: "r32", name: "Johnny", role: "BDM" },
+              { id: "r30", name: "Frankie", role: "BDM", tag: "green" }, { id: "r31", name: "Jessica", role: "BDM", tag: "green" }, { id: "r32", name: "Johnny", role: "BDM", tag: "green" },
             ]},
             { id: "c-vancouver", name: "Vancouver", reps: [
-              { id: "r33", name: "Miguel", role: "BDM" }, { id: "r34", name: "Marieke", role: "BDM" }, { id: "r35", name: "Talia", role: "BDM" },
+              { id: "r33", name: "Miguel", role: "BDM", tag: "green" }, { id: "r34", name: "Marieke", role: "BDM", tag: "green" }, { id: "r35", name: "Talia", role: "BDM", tag: "green" },
             ]},
-            { id: "c-dallas", name: "Dallas", reps: [{ id: "r36", name: "Kyle", role: "BDM" }]},
+            { id: "c-dallas", name: "Dallas", reps: [{ id: "r36", name: "Kyle", role: "BDM", tag: "green" }]},
           ]
         }
       ]
@@ -75,17 +75,17 @@ const BASE_ORG = {
           tl: { id: "tl-ne", name: "Mark Sanchez", role: "Team Lead" },
           cities: [
             { id: "c-toronto", name: "Toronto", reps: [
-              { id: "r1", name: "Jack Ireland", role: "BDM" }, { id: "r2", name: "Rep 2", role: "BDM" },
+              { id: "r1", name: "Jack Ireland", role: "BDM", tag: "green" }, { id: "r2", name: "Rep 2", role: "BDM", tag: "green" },
             ]},
             { id: "c-nyc", name: "NYC", reps: [
-              { id: "r3", name: "Megan Foster", role: "SR BDM" }, { id: "r4", name: "Aleks", role: "BDM" },
-              { id: "r5", name: "Isaiah", role: "BDM" }, { id: "r6", name: "Wendy", role: "BDM" },
-              { id: "r7", name: "Harita", role: "BDM" }, { id: "r8", name: "Hiad", role: "BDM" },
+              { id: "r3", name: "Megan Foster", role: "SR BDM", tag: "green" }, { id: "r4", name: "Aleks", role: "BDM", tag: "green" },
+              { id: "r5", name: "Isaiah", role: "BDM", tag: "green" }, { id: "r6", name: "Wendy", role: "BDM", tag: "green" },
+              { id: "r7", name: "Harita", role: "BDM", tag: "green" }, { id: "r8", name: "Hiad", role: "BDM", tag: "green" },
             ]},
             { id: "c-montreal", name: "Montreal", reps: [
-              { id: "r9", name: "Yassir", role: "BDM" }, { id: "r10", name: "Hackem", role: "BDM" },
+              { id: "r9", name: "Yassir", role: "BDM", tag: "green" }, { id: "r10", name: "Hackem", role: "BDM", tag: "green" },
             ]},
-            { id: "c-boston", name: "Boston", reps: [{ id: "r11", name: "Brianna", role: "BDM" }]},
+            { id: "c-boston", name: "Boston", reps: [{ id: "r11", name: "Brianna", role: "BDM", tag: "green" }]},
           ]
         },
         {
@@ -93,13 +93,13 @@ const BASE_ORG = {
           tl: { id: "tl-se", name: "TBD", role: "Team Lead" },
           cities: [
             { id: "c-miami", name: "Miami", reps: [
-              { id: "r12", name: "Carson", role: "BDM" }, { id: "r13", name: "Danessa", role: "BDM" }, { id: "r14", name: "Aline", role: "BDM" },
+              { id: "r12", name: "Carson", role: "BDM", tag: "green" }, { id: "r13", name: "Danessa", role: "BDM", tag: "green" }, { id: "r14", name: "Aline", role: "BDM", tag: "green" },
             ]},
             { id: "c-orlando", name: "Orlando", reps: [
-              { id: "r15", name: "Birlys", role: "BDM" }, { id: "r16", name: "Mark Conway", role: "BDM" },
+              { id: "r15", name: "Birlys", role: "BDM", tag: "green" }, { id: "r16", name: "Mark Conway", role: "BDM", tag: "green" },
             ]},
             { id: "c-atlanta", name: "Atlanta", reps: [
-              { id: "r17", name: "Janeida", role: "BDM" }, { id: "r18", name: "Anthony", role: "BDM" },
+              { id: "r17", name: "Janeida", role: "BDM", tag: "green" }, { id: "r18", name: "Anthony", role: "BDM", tag: "green" },
             ]},
           ]
         }
@@ -282,9 +282,9 @@ function DuplicateModal({ sourceLabel, phases, onSave, onClose }) {
 const REP_TAGS = [
   { id: null,      label: "No tag",              bg: null,      border: null,      dot: "#cbd5e1" },
   { id: "purple",  label: "Leadership Potential", bg: "#faf5ff", border: "#d8b4fe", dot: "#a855f7" },
-  { id: "amber",   label: "Started",              bg: "#fffbeb", border: "#fcd34d", dot: "#f59e0b" },
-  { id: "green",   label: "Hired",                bg: "#f0fdf4", border: "#86efac", dot: "#22c55e" },
-  { id: "red",     label: "Vacant",               bg: "#fff1f2", border: "#fca5a5", dot: "#ef4444" },
+  { id: "green",   label: "Started",              bg: "#f0fdf4", border: "#86efac", dot: "#22c55e" },
+  { id: "amber",   label: "Hired",                bg: "#fffbeb", border: "#fcd34d", dot: "#f59e0b" },
+  { id: "grey",    label: "Vacant",               bg: "#f8fafc", border: "#cbd5e1", dot: "#94a3b8" },
 ];
 
 /* ─── Rep card ─── */
