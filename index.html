@@ -303,6 +303,9 @@ function CityCol({ city, color, srId, regId, onEditCity, onDeleteCity, onEditRep
 /* ─── Subregion ─── */
 function Subregion({ sr, color, regId, onEditTL, onClearTL, onDeleteSR, onAddRep, onAddCity, onEditCity, onDeleteCity, onEditRep, onDeleteRep, onDragStart, onDrop, onEditSRName, tlRef, onCityDragStart, onCityDrop, draggingCityId, onCityDragEnd }) {
   const c=C[color]; const [cityOver,setCityOver]=useState(false);
+  const repCount = sr.cities.reduce((n,city)=>n+city.reps.length, 0);
+  const badgeBg = color==="blue" ? "#bfdbfe" : "#a7f3d0";
+  const badgeColor = c.tl.sub;
   return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
       <div style={{display:"flex",alignItems:"center",gap:4}}>
@@ -314,6 +317,11 @@ function Subregion({ sr, color, regId, onEditTL, onClearTL, onDeleteSR, onAddRep
       <div ref={tlRef} style={{position:"relative",background:c.tl.bg,border:"1px solid "+c.tl.border,borderRadius:8,padding:"8px 16px",textAlign:"center",minWidth:138}}>
         <div style={{fontSize:12,fontWeight:600,color:c.tl.text}}>{sr.tl.name}</div>
         <div style={{fontSize:10,color:c.tl.sub}}>{sr.tl.role}</div>
+        <div style={{display:"flex",justifyContent:"center",marginTop:4}}>
+          <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",background:badgeBg,color:badgeColor,fontSize:9,fontWeight:700,borderRadius:8,padding:"1px 6px",letterSpacing:"0.02em"}}>
+            {repCount} {repCount===1?"rep":"reps"}
+          </span>
+        </div>
         <div style={{position:"absolute",top:4,right:4,display:"flex",gap:2}}>
           <button onClick={()=>onEditTL(sr.id,regId)} title="Edit TL" style={{background:"none",border:"none",cursor:"pointer",color:c.tl.sub,fontSize:12,padding:"1px 3px"}}>✎</button>
           {sr.tl.name!=="TBD"&&(
@@ -454,6 +462,17 @@ function OrgView({ org, onUpdate }) {
   const handleEditSRName=(srId,regId)=>{const sr=org.regions.find(r=>r.id===regId)?.subregions.find(s=>s.id===srId);setEditNode({type:"srName",srId,regId,val:sr?.name||""});};
   const saveSRName=(name)=>{upd(d=>{const sr=d.regions.find(r=>r.id===editNode.regId)?.subregions.find(s=>s.id===editNode.srId);if(sr)sr.name=name;});setEditNode(null);};
 
+  /* Headcount helpers */
+  const srRepCount = sr => sr.cities.reduce((n,c)=>n+c.reps.length,0);
+  const regRepCount = reg => reg.subregions.reduce((n,sr)=>n+srRepCount(sr),0);
+  const totalRepCount = () => org.regions.reduce((n,reg)=>n+regRepCount(reg),0);
+
+  const HCBadge = ({count, bg, color}) => (
+    <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",background:bg,color:color,fontSize:10,fontWeight:700,borderRadius:10,padding:"1px 7px",marginTop:4,letterSpacing:"0.02em"}}>
+      {count} {count===1?"rep":"reps"}
+    </span>
+  );
+
   const renderModal=()=>{
     if(tlCtx) return <Modal title="Edit team lead" onClose={()=>setTlCtx(null)}><TwoFieldForm init={{name:tlCtx.name,role:tlCtx.role}} onSave={saveTL} onCancel={()=>setTlCtx(null)}/></Modal>;
     if(addRepCtx){const sr=org.regions.find(r=>r.id===addRepCtx.regId)?.subregions.find(s=>s.id===addRepCtx.srId);return <AddRepModal cities={sr?.cities||[]} onSave={saveAddRep} onClose={()=>setAddRepCtx(null)}/>;}
@@ -480,6 +499,9 @@ function OrgView({ org, onUpdate }) {
         <div ref={gmRef} style={{position:"relative",zIndex:1,background:"#312e81",borderRadius:10,padding:"10px 22px",textAlign:"center",minWidth:190}}>
           <div style={{fontSize:14,fontWeight:600,color:"#fff"}}>{org.gm.name}</div>
           <div style={{fontSize:11,color:"#a5b4fc"}}>{org.gm.role}</div>
+          <div style={{display:"flex",justifyContent:"center",marginTop:4}}>
+            <HCBadge count={totalRepCount()} bg="rgba(255,255,255,0.15)" color="#c7d2fe"/>
+          </div>
           <button onClick={handleEditGM} style={{position:"absolute",top:5,right:7,background:"none",border:"none",cursor:"pointer",color:"#a5b4fc",fontSize:13}}>✎</button>
         </div>
         <div style={{height:22}}/>
@@ -496,6 +518,9 @@ function OrgView({ org, onUpdate }) {
                 <div ref={el=>{headRefs.current[reg.id]=el;}} style={{position:"relative",background:c.head.bg,border:"1.5px solid "+c.head.border,borderRadius:10,padding:"9px 18px",textAlign:"center",minWidth:170}}>
                   <div style={{fontSize:13,fontWeight:600,color:c.head.text}}>{reg.head.name}</div>
                   <div style={{fontSize:11,color:c.head.sub}}>{reg.head.role}</div>
+                  <div style={{display:"flex",justifyContent:"center",marginTop:4}}>
+                    <HCBadge count={regRepCount(reg)} bg={reg.color==="blue"?"#bfdbfe":"#a7f3d0"} color={c.head.sub}/>
+                  </div>
                   <button onClick={()=>handleEditHead(reg.id)} style={{position:"absolute",top:5,right:7,background:"none",border:"none",cursor:"pointer",color:c.head.sub,fontSize:13}}>✎</button>
                 </div>
                 <div style={{height:24}}/>
