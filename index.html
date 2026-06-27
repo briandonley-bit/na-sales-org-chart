@@ -109,7 +109,7 @@ const INITIAL_PHASES = [
 
 // Boot priority: 1) embedded snapshot, 2) localStorage, 3) default
 const __snap = window.__SNAPSHOT__;
-const __stored = (() => { try { const s = localStorage.getItem('org-chart-data'); return s ? JSON.parse(s) : null; } catch { return null; } })();
+const __stored = (() => { try { const s = localStorage.getItem('org-chart-data'); return s ? JSON.parse(s) : null; } catch(e) { return null; } })();
 const __src = __snap && __snap.phases ? __snap : __stored && __stored.phases ? __stored : null;
 const BOOT_PHASES = __src ? __src.phases : INITIAL_PHASES;
 const BOOT_ACTIVE = __src ? __src.activeId : INITIAL_PHASES[0].id;
@@ -707,7 +707,7 @@ function App() {
       setAutoSaveLabel('Auto-saved');
       const t = setTimeout(() => setAutoSaveLabel(null), 2000);
       return () => clearTimeout(t);
-    } catch {}
+    } catch(e) {}
   }, [phases, activeId]);
 
   const activeIdRef = useRef(activeId);
@@ -770,7 +770,7 @@ function App() {
         historyRef.current = {};
         setLoadToast('ok');
         setTimeout(() => setLoadToast(null), 3000);
-      } catch {
+      } catch(e) {
         setLoadToast('err');
         setTimeout(() => setLoadToast(null), 3000);
       }
