@@ -308,7 +308,7 @@ function CityCol({ city, color, srId, regId, onEditCity, onDeleteCity, onEditRep
 }
 
 /* ─── Subregion ─── */
-function Subregion({ sr, color, regId, onEditTL, onDeleteSR, onAddRep, onAddCity, onEditCity, onDeleteCity, onEditRep, onDeleteRep, onDragStart, onDrop, onEditSRName, tlRef, onCityDragStart, onCityDrop, draggingCityId, onCityDragEnd }) {
+function Subregion({ sr, color, regId, onEditTL, onDeleteSR, onAddRep, onAddCity, onEditCity, onDeleteCity, onEditRep, onDeleteRep, onDragStart, onDrop, onEditSRName, tlRef, onCityDragStart, onCityDrop, draggingCityId, onCityDragEnd, onClearTL }) {
   const c=C[color];
   const [cityOver, setCityOver] = useState(false);
 
@@ -326,10 +326,15 @@ function Subregion({ sr, color, regId, onEditTL, onDeleteSR, onAddRep, onAddCity
         <button onClick={()=>onDeleteSR(sr.id,regId)} title="Remove" style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:13,padding:"0 2px"}}>×</button>
       </div>
       <div style={{width:1,height:7,background:"#d1d5db"}}/>
-      <div ref={tlRef} style={{position:"relative",background:c.tl.bg,border:`1px solid ${c.tl.border}`,borderRadius:8,padding:"8px 16px",textAlign:"center",minWidth:138}}>
+      <div ref={tlRef} style={{position:"relative",background:c.tl.bg,border:`1px solid ${c.tl.border}`,borderRadius:8,padding:"8px 16px 8px 16px",textAlign:"center",minWidth:138}}>
         <div style={{fontSize:12,fontWeight:600,color:c.tl.text}}>{sr.tl.name}</div>
         <div style={{fontSize:10,color:c.tl.sub}}>{sr.tl.role}</div>
-        <button onClick={()=>onEditTL(sr.id,regId)} title="Edit TL" style={{position:"absolute",top:4,right:5,background:"none",border:"none",cursor:"pointer",color:c.tl.sub,fontSize:12}}>✎</button>
+        <div style={{position:"absolute",top:4,right:4,display:"flex",gap:2}}>
+          <button onClick={()=>onEditTL(sr.id,regId)} title="Edit TL" style={{background:"none",border:"none",cursor:"pointer",color:c.tl.sub,fontSize:12,padding:"1px 3px"}}>✎</button>
+          {sr.tl.name !== "TBD" && (
+            <button onClick={()=>onClearTL(sr.id,regId)} title="Remove team lead (keeps cities & reps)" style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:13,padding:"1px 3px",lineHeight:1}}>×</button>
+          )}
+        </div>
       </div>
       <div style={{width:1,height:10,background:"#d1d5db"}}/>
 
@@ -511,6 +516,7 @@ function OrgView({ org, onUpdate }) {
   const handleDeleteCity=(cityId,srId,regId)=>upd(d=>{const sr=d.regions.find(r=>r.id===regId)?.subregions.find(s=>s.id===srId);if(sr)sr.cities=sr.cities.filter(c=>c.id!==cityId);});
   const handleEditTL=(srId,regId)=>{const sr=org.regions.find(r=>r.id===regId)?.subregions.find(s=>s.id===srId);setTlCtx({srId,regId,name:sr.tl.name,role:sr.tl.role});};
   const saveTL=({name,role})=>{upd(d=>{const sr=d.regions.find(r=>r.id===tlCtx.regId)?.subregions.find(s=>s.id===tlCtx.srId);if(sr){sr.tl.name=name;sr.tl.role=role;}});setTlCtx(null);};
+  const handleClearTL=(srId,regId)=>upd(d=>{const sr=d.regions.find(r=>r.id===regId)?.subregions.find(s=>s.id===srId);if(sr){sr.tl={...sr.tl,name:"TBD",role:"Team Lead"};}});
   const handleDeleteSR=(srId,regId)=>upd(d=>{const reg=d.regions.find(r=>r.id===regId);if(reg)reg.subregions=reg.subregions.filter(s=>s.id!==srId);});
   const handleAddSR=(regId)=>setEditNode({type:"addSR",regId});
   const saveAddSR=({name,tlName})=>{upd(d=>{const reg=d.regions.find(r=>r.id===editNode.regId);if(reg)reg.subregions.push({id:uid(),name,tl:{id:uid(),name:tlName||"TBD",role:"Team Lead"},cities:[]});});setEditNode(null);};
@@ -592,7 +598,7 @@ function OrgView({ org, onUpdate }) {
                   {reg.subregions.map(sr=>(
                     <Subregion key={sr.id} sr={sr} color={reg.color} regId={reg.id}
                       tlRef={el=>{ tlRefs.current[reg.id+'--'+sr.id]=el; }}
-                      onEditTL={handleEditTL} onDeleteSR={handleDeleteSR} onAddRep={handleAddRep} onAddCity={handleAddCity}
+                      onEditTL={handleEditTL} onClearTL={handleClearTL} onDeleteSR={handleDeleteSR} onAddRep={handleAddRep} onAddCity={handleAddCity}
                       onEditCity={handleEditCity} onDeleteCity={handleDeleteCity}
                       onEditRep={handleEditRep} onDeleteRep={handleDeleteRep}
                       onEditSRName={handleEditSRName}
@@ -614,17 +620,76 @@ function OrgView({ org, onUpdate }) {
 
 /* ─── Root App with phases ─── */
 function App() {
+  // History stack: each entry is a full `phases` snapshot for the active phase
   const [phases, setPhases] = useState(INITIAL_PHASES);
   const [activeId, setActiveId] = useState(INITIAL_PHASES[0].id);
   const [phaseModal, setPhaseModal] = useState(null);
   const [dupModal, setDupModal] = useState(null);
   const [zoom, setZoom] = useState(1);
 
+  // Per-phase undo/redo stacks: { [phaseId]: { past: [], future: [] } }
+  const historyRef = useRef({});
+
+  const getHist = (id) => {
+    if (!historyRef.current[id]) historyRef.current[id] = { past: [], future: [] };
+    return historyRef.current[id];
+  };
+
   const activePhase = phases.find(p => p.id === activeId) || phases[0];
+  const hist = getHist(activeId);
+  const canUndo = hist.past.length > 0;
+  const canRedo = hist.future.length > 0;
 
   const handleOrgUpdate = (fn) => {
-    setPhases(prev => prev.map(p => p.id === activeId ? { ...p, org: fn(p.org) } : p));
+    setPhases(prev => {
+      const next = prev.map(p => {
+        if (p.id !== activeId) return p;
+        const newOrg = fn(p.org);
+        const h = getHist(activeId);
+        h.past.push(clone(p.org));
+        h.future = [];
+        return { ...p, org: newOrg };
+      });
+      return next;
+    });
   };
+
+  const handleUndo = () => {
+    const h = getHist(activeId);
+    if (!h.past.length) return;
+    setPhases(prev => prev.map(p => {
+      if (p.id !== activeId) return p;
+      const prev_org = h.past.pop();
+      h.future.push(clone(p.org));
+      return { ...p, org: prev_org };
+    }));
+  };
+
+  const handleRedo = () => {
+    const h = getHist(activeId);
+    if (!h.future.length) return;
+    setPhases(prev => prev.map(p => {
+      if (p.id !== activeId) return p;
+      const next_org = h.future.pop();
+      h.past.push(clone(p.org));
+      return { ...p, org: next_org };
+    }));
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = e => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); handleUndo(); }
+      if ((e.key === 'z' && e.shiftKey) || e.key === 'y') { e.preventDefault(); handleRedo(); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [activeId, phases]);
+
+  const activeIdRef = useRef(activeId);
+  activeIdRef.current = activeId;
 
   const handleCreatePhase = ({ label, color }) => {
     const newPhase = { id: uid(), label, color, org: clone(BASE_ORG) };
@@ -652,6 +717,44 @@ function App() {
     setPhases(prev => [...prev, newPhase]);
     setActiveId(newPhase.id);
     setDupModal(null);
+  };
+
+  // ── Save / Load ──
+  const [loadToast, setLoadToast] = useState(null); // null | 'ok' | 'err'
+  const fileInputRef = useRef(null);
+  const chartScrollRef = useRef(null);
+
+  const handleSave = () => {
+    const payload = JSON.stringify({ version: 1, activeId, phases }, null, 2);
+    const blob = new Blob([payload], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'org-data.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleLoad = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        if (!parsed.phases || !Array.isArray(parsed.phases)) throw new Error('bad format');
+        setPhases(parsed.phases);
+        setActiveId(parsed.activeId || parsed.phases[0].id);
+        historyRef.current = {};
+        setLoadToast('ok');
+        setTimeout(() => setLoadToast(null), 3000);
+      } catch {
+        setLoadToast('err');
+        setTimeout(() => setLoadToast(null), 3000);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   return (
@@ -687,6 +790,29 @@ function App() {
 
         {/* Actions */}
         <div style={{display:"flex",alignItems:"center",gap:4,marginLeft:"auto",paddingLeft:12,flexShrink:0}}>
+          {/* Undo / Redo */}
+          <button onClick={handleUndo} disabled={!canUndo} title="Undo (Cmd+Z)"
+            style={{width:30,height:30,borderRadius:6,border:"1px solid #e2e8f0",background:"#fff",fontSize:15,cursor:canUndo?"pointer":"default",color:canUndo?"#475569":"#cbd5e1",display:"flex",alignItems:"center",justifyContent:"center"}}>↩</button>
+          <button onClick={handleRedo} disabled={!canRedo} title="Redo (Cmd+Shift+Z)"
+            style={{width:30,height:30,borderRadius:6,border:"1px solid #e2e8f0",background:"#fff",fontSize:15,cursor:canRedo?"pointer":"default",color:canRedo?"#475569":"#cbd5e1",display:"flex",alignItems:"center",justifyContent:"center",marginRight:4}}>↪</button>
+
+          {/* Divider */}
+          <div style={{width:1,height:20,background:"#e2e8f0",margin:"0 4px"}}/>
+
+          {/* Save / Load */}
+          <button onClick={handleSave} title="Save org data to file"
+            style={{fontSize:12,color:"#fff",background:"#059669",border:"none",borderRadius:6,padding:"5px 11px",whiteSpace:"nowrap",cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+            ↓ Save
+          </button>
+          <button onClick={()=>fileInputRef.current.click()} title="Load org data from file"
+            style={{fontSize:12,color:"#475569",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:6,padding:"5px 11px",whiteSpace:"nowrap",cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+            ↑ Load
+          </button>
+          <input ref={fileInputRef} type="file" accept=".json" onChange={handleLoad} style={{display:"none"}}/>
+
+          {/* Divider */}
+          <div style={{width:1,height:20,background:"#e2e8f0",margin:"0 4px"}}/>
+
           <button onClick={()=>setDupModal(activeId)} style={{fontSize:12,color:"#475569",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:6,padding:"5px 11px",whiteSpace:"nowrap"}}>
             ⧉ Duplicate
           </button>
@@ -696,6 +822,18 @@ function App() {
           <div style={{fontSize:11,color:"#94a3b8",paddingLeft:8,whiteSpace:"nowrap"}}>✎ edit · drag to move</div>
         </div>
       </div>
+
+      {/* Toast notification */}
+      {loadToast && (
+        <div style={{
+          position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",
+          background: loadToast==='ok' ? "#059669" : "#ef4444",
+          color:"#fff",fontSize:13,fontWeight:500,padding:"10px 20px",borderRadius:8,
+          boxShadow:"0 4px 16px rgba(0,0,0,0.15)",zIndex:9999,whiteSpace:"nowrap",
+        }}>
+          {loadToast==='ok' ? "✓ Org data loaded successfully" : "✗ Invalid file — please use a saved org-data.json"}
+        </div>
+      )}
 
       {/* Phase label banner + zoom controls */}
       <div style={{padding:"8px 20px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",display:"flex",alignItems:"center",gap:10}}>
@@ -716,23 +854,36 @@ function App() {
         </div>
       </div>
 
-      {/* Chart — zoom via transform */}
+      {/* Chart — zoom via transform with proper scroll area */}
       <div
-        style={{flex:1,overflow:"auto",padding:"24px 20px 80px"}}
+        ref={chartScrollRef}
+        style={{flex:1,overflow:"auto",position:"relative"}}
         onWheel={e=>{
           if(e.ctrlKey||e.metaKey){
             e.preventDefault();
             setZoom(z=>Math.min(2,Math.max(0.3,+(z - e.deltaY*0.001).toFixed(2))));
+          } else if(e.shiftKey) {
+            // Shift+scroll = horizontal pan
+            e.preventDefault();
+            e.currentTarget.scrollLeft += e.deltaY;
           }
         }}
       >
+        {/* This outer div is the scroll canvas — its size matches the scaled content */}
         <div style={{
-          transform:`scale(${zoom})`,
-          transformOrigin:"top center",
-          transition:"transform 0.1s",
-          width: zoom < 1 ? `${100/zoom}%` : "100%",
+          minWidth: `${Math.max(100, zoom * 100)}%`,
+          minHeight: `${Math.max(100, zoom * 100)}%`,
+          padding: `${24 * zoom}px ${20 * zoom}px ${80 * zoom}px`,
         }}>
-          <OrgView key={activeId} org={activePhase.org} onUpdate={handleOrgUpdate}/>
+          <div style={{
+            transform:`scale(${zoom})`,
+            transformOrigin:"top left",
+            transition:"transform 0.1s",
+            display:"inline-block",
+            width:`${100/zoom}%`,
+          }}>
+            <OrgView key={activeId} org={activePhase.org} onUpdate={handleOrgUpdate}/>
+          </div>
         </div>
       </div>
 
