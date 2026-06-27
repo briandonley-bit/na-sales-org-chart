@@ -107,6 +107,11 @@ const INITIAL_PHASES = [
   { id: "phase-1", label: "Current", color: "#6366f1", org: JSON.parse(JSON.stringify(BASE_ORG)) }
 ];
 
+// If this is a snapshot export, override with embedded data
+const __snap = window.__SNAPSHOT__;
+const BOOT_PHASES = __snap && __snap.phases ? __snap.phases : INITIAL_PHASES;
+const BOOT_ACTIVE = __snap && __snap.activeId ? __snap.activeId : INITIAL_PHASES[0].id;
+
 const C = {
   blue: {
     pill: "#2563eb", head: { bg: "#dbeafe", border: "#93c5fd", text: "#1e3a5f", sub: "#2563eb" },
@@ -621,8 +626,8 @@ function OrgView({ org, onUpdate }) {
 /* ─── Root App with phases ─── */
 function App() {
   // History stack: each entry is a full `phases` snapshot for the active phase
-  const [phases, setPhases] = useState(INITIAL_PHASES);
-  const [activeId, setActiveId] = useState(INITIAL_PHASES[0].id);
+  const [phases, setPhases] = useState(BOOT_PHASES);
+  const [activeId, setActiveId] = useState(BOOT_ACTIVE);
   const [phaseModal, setPhaseModal] = useState(null);
   const [dupModal, setDupModal] = useState(null);
   const [zoom, setZoom] = useState(1);
@@ -757,6 +762,29 @@ function App() {
     e.target.value = '';
   };
 
+  const handleSnapshot = () => {
+    // Grab the current page's HTML source
+    const currentHTML = document.documentElement.outerHTML;
+    const dataPayload = JSON.stringify({ version: 1, activeId, phases });
+    // Inject a script tag right before the babel script that sets window.__SNAPSHOT__
+    const injected = currentHTML.replace(
+      '<script type="text/babel">',
+      `<script>window.__SNAPSHOT__ = ${dataPayload};</script>\n<script type="text/babel">`
+    );
+    const blob = new Blob([injected], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    // Name it with current date
+    const d = new Date();
+    const stamp = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    a.download = `org-chart-${stamp}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setLoadToast('snap');
+    setTimeout(() => setLoadToast(null), 3000);
+  };
+
   return (
     <div style={{minHeight:"100vh",background:"#f0f0ed",display:"flex",flexDirection:"column"}}>
       {/* Top bar */}
@@ -799,7 +827,7 @@ function App() {
           {/* Divider */}
           <div style={{width:1,height:20,background:"#e2e8f0",margin:"0 4px"}}/>
 
-          {/* Save / Load */}
+          {/* Save / Load / Snapshot */}
           <button onClick={handleSave} title="Save org data to file"
             style={{fontSize:12,color:"#fff",background:"#059669",border:"none",borderRadius:6,padding:"5px 11px",whiteSpace:"nowrap",cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
             ↓ Save
@@ -809,6 +837,10 @@ function App() {
             ↑ Load
           </button>
           <input ref={fileInputRef} type="file" accept=".json" onChange={handleLoad} style={{display:"none"}}/>
+          <button onClick={handleSnapshot} title="Export a self-contained snapshot to share"
+            style={{fontSize:12,color:"#fff",background:"#6366f1",border:"none",borderRadius:6,padding:"5px 11px",whiteSpace:"nowrap",cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+            ↗ Share
+          </button>
 
           {/* Divider */}
           <div style={{width:1,height:20,background:"#e2e8f0",margin:"0 4px"}}/>
@@ -819,7 +851,7 @@ function App() {
           <button onClick={()=>setPhaseModal("new")} style={{fontSize:12,color:"#fff",background:"#1e293b",border:"none",borderRadius:6,padding:"5px 11px",whiteSpace:"nowrap"}}>
             + New phase
           </button>
-          <div style={{fontSize:11,color:"#94a3b8",paddingLeft:8,whiteSpace:"nowrap"}}>✎ edit · drag to move</div>
+          <div style={{fontSize:11,color:"#94a3b8",paddingLeft:8,whiteSpace:"nowrap"}}>✎ edit · drag to move · shift+scroll or trackpad to pan</div>
         </div>
       </div>
 
@@ -827,11 +859,13 @@ function App() {
       {loadToast && (
         <div style={{
           position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",
-          background: loadToast==='ok' ? "#059669" : "#ef4444",
+          background: loadToast==='ok' ? "#059669" : loadToast==='snap' ? "#6366f1" : "#ef4444",
           color:"#fff",fontSize:13,fontWeight:500,padding:"10px 20px",borderRadius:8,
           boxShadow:"0 4px 16px rgba(0,0,0,0.15)",zIndex:9999,whiteSpace:"nowrap",
         }}>
-          {loadToast==='ok' ? "✓ Org data loaded successfully" : "✗ Invalid file — please use a saved org-data.json"}
+          {loadToast==='ok' ? "✓ Org data loaded successfully"
+            : loadToast==='snap' ? "✓ Snapshot downloaded — send that HTML file to share"
+            : "✗ Invalid file — please use a saved org-data.json"}
         </div>
       )}
 
