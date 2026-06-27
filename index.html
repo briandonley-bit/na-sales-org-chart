@@ -107,10 +107,12 @@ const INITIAL_PHASES = [
   { id: "phase-1", label: "Current", color: "#6366f1", org: JSON.parse(JSON.stringify(BASE_ORG)) }
 ];
 
-// If this is a snapshot export, override with embedded data
+// Boot priority: 1) embedded snapshot, 2) localStorage, 3) default
 const __snap = window.__SNAPSHOT__;
-const BOOT_PHASES = __snap && __snap.phases ? __snap.phases : INITIAL_PHASES;
-const BOOT_ACTIVE = __snap && __snap.activeId ? __snap.activeId : INITIAL_PHASES[0].id;
+const __stored = (() => { try { const s = localStorage.getItem('org-chart-data'); return s ? JSON.parse(s) : null; } catch { return null; } })();
+const __src = __snap && __snap.phases ? __snap : __stored && __stored.phases ? __stored : null;
+const BOOT_PHASES = __src ? __src.phases : INITIAL_PHASES;
+const BOOT_ACTIVE = __src ? __src.activeId : INITIAL_PHASES[0].id;
 
 const C = {
   blue: {
@@ -693,6 +695,21 @@ function App() {
     return () => window.removeEventListener('keydown', handler);
   }, [activeId, phases]);
 
+  // Auto-save to localStorage on every change
+  const [autoSaveLabel, setAutoSaveLabel] = useState(
+    __stored ? 'Restored from last session' : null
+  );
+  useEffect(() => {
+    // Don't auto-save snapshots — they're read-only views
+    if (window.__SNAPSHOT__) return;
+    try {
+      localStorage.setItem('org-chart-data', JSON.stringify({ version: 1, activeId, phases }));
+      setAutoSaveLabel('Auto-saved');
+      const t = setTimeout(() => setAutoSaveLabel(null), 2000);
+      return () => clearTimeout(t);
+    } catch {}
+  }, [phases, activeId]);
+
   const activeIdRef = useRef(activeId);
   activeIdRef.current = activeId;
 
@@ -875,6 +892,18 @@ function App() {
         <span style={{fontSize:13,fontWeight:500,color:"#334155"}}>{activePhase.label}</span>
         <button onClick={()=>setPhaseModal({phase:activePhase})} title="Rename phase" style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:13,padding:"0 2px",lineHeight:1}}>✎</button>
         <span style={{fontSize:11,color:"#94a3b8"}}>— {countReps(activePhase.org)} reps across {countCities(activePhase.org)} cities</span>
+        {/* Auto-save indicator */}
+        {autoSaveLabel && (
+          <span style={{
+            fontSize:11,
+            color: autoSaveLabel === 'Restored from last session' ? '#6366f1' : '#059669',
+            background: autoSaveLabel === 'Restored from last session' ? '#eef2ff' : '#f0fdf4',
+            border: `1px solid ${autoSaveLabel === 'Restored from last session' ? '#c7d2fe' : '#bbf7d0'}`,
+            borderRadius:4,padding:"1px 7px",transition:"opacity 0.3s",
+          }}>
+            {autoSaveLabel === 'Restored from last session' ? '↺ ' : '✓ '}{autoSaveLabel}
+          </span>
+        )}
 
         {/* Zoom controls */}
         <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}>
