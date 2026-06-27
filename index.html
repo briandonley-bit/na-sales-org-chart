@@ -169,6 +169,34 @@ function TwoFieldForm({ init, onSave, onCancel }) {
   const [role,setRole]=useState(init.role||"");
   return (<><Field label="Name" value={name} onChange={setName}/><Field label="Role" value={role} onChange={setRole}/><ModalButtons onCancel={onCancel} onSave={()=>onSave({name,role})}/></>);
 }
+function RepEditForm({ init, onSave, onCancel }) {
+  const [name,setName]=useState(init.name||"");
+  const [role,setRole]=useState(init.role||"");
+  const [tag,setTag]=useState(init.tag||null);
+  return (
+    <>
+      <Field label="Name" value={name} onChange={setName}/>
+      <Field label="Role" value={role} onChange={setRole}/>
+      <div style={{marginBottom:16}}>
+        <div style={{fontSize:12,color:"#666",marginBottom:8}}>Colour tag</div>
+        <div style={{display:"flex",gap:8}}>
+          {REP_TAGS.map(t=>(
+            <button key={String(t.id)} onClick={()=>setTag(t.id)}
+              title={t.label}
+              style={{
+                width:28,height:28,borderRadius:"50%",cursor:"pointer",flexShrink:0,
+                background: t.dot,
+                border: tag===t.id ? "3px solid #1e293b" : "2px solid transparent",
+                outline: tag===t.id ? "1px solid #fff" : "none",
+                outlineOffset:"-4px",
+              }}/>
+          ))}
+        </div>
+      </div>
+      <ModalButtons onCancel={onCancel} onSave={()=>onSave({name,role,tag})}/>
+    </>
+  );
+}
 function AddSRForm({ onSave, onCancel }) {
   const [name,setName]=useState(""); const [tlName,setTlName]=useState("");
   return (<><Field label="Subregion name" value={name} onChange={setName}/><Field label="Team lead (blank = TBD)" value={tlName} onChange={setTlName} placeholder="TBD"/><ModalButtons onCancel={onCancel} onSave={()=>name&&onSave({name,tlName})} saveLabel="Add"/></>);
@@ -250,14 +278,31 @@ function DuplicateModal({ sourceLabel, phases, onSave, onClose }) {
   );
 }
 
+/* ─── Rep tag colours ─── */
+const REP_TAGS = [
+  { id: null,      label: "No tag",              bg: null,      border: null,      dot: "#cbd5e1" },
+  { id: "purple",  label: "Leadership Potential", bg: "#faf5ff", border: "#d8b4fe", dot: "#a855f7" },
+  { id: "amber",   label: "Started",              bg: "#fffbeb", border: "#fcd34d", dot: "#f59e0b" },
+  { id: "green",   label: "Hired",                bg: "#f0fdf4", border: "#86efac", dot: "#22c55e" },
+  { id: "red",     label: "Vacant",               bg: "#fff1f2", border: "#fca5a5", dot: "#ef4444" },
+];
+
 /* ─── Rep card ─── */
 function RepCard({ rep, color, cityName, onEdit, onDelete, onDragStart }) {
   const c=C[color].rep; const cb=C[color].cityBadge;
   const [hov,setHov]=useState(false);
+  const tag = REP_TAGS.find(t=>t.id===rep.tag) || REP_TAGS[0];
+  const hasBg = !!tag.bg;
   return (
     <div draggable onDragStart={e=>onDragStart(e,rep.id)}
       onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-      style={{background:hov?"#f1f5f9":c.bg,border:"1px solid "+c.border,borderRadius:7,padding:"6px 8px",marginBottom:3,display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"grab",userSelect:"none",transition:"background 0.1s",minWidth:148}}>
+      style={{
+        background: hov ? "#f1f5f9" : (hasBg ? tag.bg : c.bg),
+        border: "1px solid "+(hasBg ? tag.border : c.border),
+        borderLeft: hasBg ? "3px solid "+tag.dot : "1px solid "+c.border,
+        borderRadius:7,padding:"6px 8px",marginBottom:3,display:"flex",alignItems:"center",
+        justifyContent:"space-between",cursor:"grab",userSelect:"none",transition:"background 0.1s",minWidth:148
+      }}>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontSize:12,fontWeight:500,color:c.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{rep.name}</div>
         <div style={{display:"flex",alignItems:"center",gap:5,marginTop:2}}>
@@ -438,7 +483,7 @@ function OrgView({ org, onUpdate }) {
 
   /* Edits */
   const handleEditRep=(rep,cityId,srId,regId)=>setEditNode({type:"rep",rep:clone(rep),cityId,srId,regId});
-  const saveRep=({name,role})=>{const{rep:o,cityId,srId,regId}=editNode;upd(d=>{const c=d.regions.find(r=>r.id===regId)?.subregions.find(s=>s.id===srId)?.cities.find(c=>c.id===cityId);const rep=c?.reps.find(r=>r.id===o.id);if(rep){rep.name=name;rep.role=role;}});setEditNode(null);};
+  const saveRep=({name,role,tag})=>{const{rep:o,cityId,srId,regId}=editNode;upd(d=>{const c=d.regions.find(r=>r.id===regId)?.subregions.find(s=>s.id===srId)?.cities.find(c=>c.id===cityId);const rep=c?.reps.find(r=>r.id===o.id);if(rep){rep.name=name;rep.role=role;rep.tag=tag||null;}});setEditNode(null);};
   const handleDeleteRep=(repId,cityId,srId,regId)=>upd(d=>{const c=d.regions.find(r=>r.id===regId)?.subregions.find(s=>s.id===srId)?.cities.find(c=>c.id===cityId);if(c)c.reps=c.reps.filter(r=>r.id!==repId);});
   const handleEditCity=(city,srId,regId)=>setEditNode({type:"city",city:clone(city),srId,regId});
   const saveCity=(name)=>{const{city,srId,regId}=editNode;upd(d=>{const c=d.regions.find(r=>r.id===regId)?.subregions.find(s=>s.id===srId)?.cities.find(c=>c.id===city.id);if(c)c.name=name;});setEditNode(null);};
@@ -477,7 +522,11 @@ function OrgView({ org, onUpdate }) {
     if(tlCtx) return <Modal title="Edit team lead" onClose={()=>setTlCtx(null)}><TwoFieldForm init={{name:tlCtx.name,role:tlCtx.role}} onSave={saveTL} onCancel={()=>setTlCtx(null)}/></Modal>;
     if(addRepCtx){const sr=org.regions.find(r=>r.id===addRepCtx.regId)?.subregions.find(s=>s.id===addRepCtx.srId);return <AddRepModal cities={sr?.cities||[]} onSave={saveAddRep} onClose={()=>setAddRepCtx(null)}/>;}
     if(!editNode) return null;
-    if(editNode.type==="rep") return <Modal title="Edit rep" onClose={()=>setEditNode(null)}><TwoFieldForm init={{name:editNode.rep.name,role:editNode.rep.role}} onSave={saveRep} onCancel={()=>setEditNode(null)}/></Modal>;
+    if(editNode.type==="rep") return (
+      <Modal title="Edit rep" onClose={()=>setEditNode(null)}>
+        <RepEditForm init={{name:editNode.rep.name,role:editNode.rep.role,tag:editNode.rep.tag||null}} onSave={saveRep} onCancel={()=>setEditNode(null)}/>
+      </Modal>
+    );
     if(editNode.type==="city") return <Modal title="Rename city" onClose={()=>setEditNode(null)}><Field label="City name" value={editNode.city.name} onChange={v=>setEditNode(p=>({...p,city:{...p.city,name:v}}))}/><ModalButtons onCancel={()=>setEditNode(null)} onSave={()=>saveCity(editNode.city.name)}/></Modal>;
     if(editNode.type==="gm") return <Modal title="Edit GM" onClose={()=>setEditNode(null)}><TwoFieldForm init={{name:editNode.name,role:editNode.role}} onSave={saveGM} onCancel={()=>setEditNode(null)}/></Modal>;
     if(editNode.type==="head") return <Modal title="Edit region head" onClose={()=>setEditNode(null)}><TwoFieldForm init={{name:editNode.name,role:editNode.role}} onSave={saveHead} onCancel={()=>setEditNode(null)}/></Modal>;
@@ -684,6 +733,17 @@ function App() {
           <button onClick={()=>setZoom(z=>Math.min(2,+(z+0.1).toFixed(1)))} style={{width:28,height:28,borderRadius:6,border:"1px solid #e2e8f0",background:"#fff",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#475569",fontWeight:500}}>+</button>
           <button onClick={()=>setZoom(1)} style={{fontSize:11,color:"#64748b",background:"none",border:"1px solid #e2e8f0",borderRadius:5,padding:"3px 8px",cursor:"pointer",marginLeft:2}}>Reset</button>
         </div>
+      </div>
+
+      {/* Legend */}
+      <div style={{padding:"6px 20px",background:"#fff",borderBottom:"1px solid #e2e8f0",display:"flex",alignItems:"center",gap:16,flexShrink:0,flexWrap:"wrap"}}>
+        <span style={{fontSize:11,fontWeight:500,color:"#94a3b8",letterSpacing:"0.05em",textTransform:"uppercase"}}>Legend</span>
+        {REP_TAGS.filter(t=>t.id!==null).map(t=>(
+          <div key={t.id} style={{display:"flex",alignItems:"center",gap:6}}>
+            <div style={{width:14,height:14,borderRadius:3,background:t.bg,border:"1px solid "+t.border,borderLeft:"3px solid "+t.dot,flexShrink:0}}/>
+            <span style={{fontSize:11,color:"#475569",whiteSpace:"nowrap"}}>{t.label}</span>
+          </div>
+        ))}
       </div>
 
       {/* Chart scroll area */}
