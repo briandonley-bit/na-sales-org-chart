@@ -682,6 +682,33 @@ function App() {
     e.target.value="";
   };
 
+  const [dragPhaseId, setDragPhaseId] = useState(null);
+  const [dragOverPhaseId, setDragOverPhaseId] = useState(null);
+
+  const handlePhaseDragStart = (e, phaseId) => {
+    setDragPhaseId(phaseId);
+    e.dataTransfer.setData("dragtype", "phase");
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const handlePhaseDragOver = (e, phaseId) => {
+    e.preventDefault();
+    if (phaseId !== dragPhaseId) setDragOverPhaseId(phaseId);
+  };
+  const handlePhaseDrop = (e, targetPhaseId) => {
+    e.preventDefault();
+    if (!dragPhaseId || dragPhaseId === targetPhaseId) { setDragPhaseId(null); setDragOverPhaseId(null); return; }
+    setPhases(prev => {
+      const arr = [...prev];
+      const fromIdx = arr.findIndex(p => p.id === dragPhaseId);
+      const toIdx = arr.findIndex(p => p.id === targetPhaseId);
+      const [moved] = arr.splice(fromIdx, 1);
+      arr.splice(toIdx, 0, moved);
+      return arr;
+    });
+    setDragPhaseId(null); setDragOverPhaseId(null);
+  };
+  const handlePhaseDragEnd = () => { setDragPhaseId(null); setDragOverPhaseId(null); };
+
   const countReps=org=>{let n=0;org.regions.forEach(r=>r.subregions.forEach(s=>s.cities.forEach(c=>n+=c.reps.length)));return n;};
   const countCities=org=>{let n=0;org.regions.forEach(r=>r.subregions.forEach(s=>n+=s.cities.length));return n;};
 
@@ -693,17 +720,28 @@ function App() {
         <div style={{padding:"14px 16px 14px 4px",fontSize:14,fontWeight:700,color:"#1e293b",whiteSpace:"nowrap",display:"flex",alignItems:"center",borderRight:"1px solid #f1f5f9",marginRight:8}}>
           NA Sales Org
         </div>
-        {/* Phase tabs */}
+        {/* Phase tabs — draggable */}
         <div style={{display:"flex",alignItems:"stretch",overflowX:"auto",flex:1}}>
-          {phases.map(phase=>(
-            <div key={phase.id} style={{display:"flex",alignItems:"stretch",flexShrink:0}}>
-              <button onClick={()=>setActiveId(phase.id)} style={{padding:"0 16px",height:"100%",border:"none",borderBottom:activeId===phase.id?"3px solid "+phase.color:"3px solid transparent",background:"none",fontSize:13,fontWeight:activeId===phase.id?600:400,color:activeId===phase.id?phase.color:"#64748b",cursor:"pointer",whiteSpace:"nowrap",transition:"all 0.15s",display:"flex",alignItems:"center",gap:7}}>
-                <span style={{width:8,height:8,borderRadius:"50%",background:phase.color,display:"inline-block",flexShrink:0}}/>
-                {phase.label}
-              </button>
-              {activeId===phase.id&&<button onClick={()=>setPhaseModal({phase})} style={{background:"none",border:"none",cursor:"pointer",padding:"0 4px 0 0",color:"#94a3b8",fontSize:13,display:"flex",alignItems:"center"}} title="Edit phase">⚙</button>}
-            </div>
-          ))}
+          {phases.map(phase=>{
+            const isDragging = dragPhaseId===phase.id;
+            const isOver = dragOverPhaseId===phase.id;
+            return (
+              <div key={phase.id}
+                draggable
+                onDragStart={e=>handlePhaseDragStart(e,phase.id)}
+                onDragOver={e=>handlePhaseDragOver(e,phase.id)}
+                onDrop={e=>handlePhaseDrop(e,phase.id)}
+                onDragEnd={handlePhaseDragEnd}
+                style={{display:"flex",alignItems:"stretch",flexShrink:0,opacity:isDragging?0.4:1,transition:"opacity 0.15s",borderLeft:isOver?"3px solid "+phase.color:"3px solid transparent",}}>
+                <button onClick={()=>setActiveId(phase.id)}
+                  style={{padding:"0 16px",height:"100%",border:"none",borderBottom:activeId===phase.id?"3px solid "+phase.color:"3px solid transparent",background:isOver?"#f8fafc":"none",fontSize:13,fontWeight:activeId===phase.id?600:400,color:activeId===phase.id?phase.color:"#64748b",cursor:"grab",whiteSpace:"nowrap",transition:"all 0.15s",display:"flex",alignItems:"center",gap:7,userSelect:"none"}}>
+                  <span style={{width:8,height:8,borderRadius:"50%",background:phase.color,display:"inline-block",flexShrink:0}}/>
+                  {phase.label}
+                </button>
+                {activeId===phase.id&&<button onClick={()=>setPhaseModal({phase})} style={{background:"none",border:"none",cursor:"pointer",padding:"0 4px 0 0",color:"#94a3b8",fontSize:13,display:"flex",alignItems:"center"}} title="Edit phase">⚙</button>}
+              </div>
+            );
+          })}
         </div>
         {/* Actions */}
         <div style={{display:"flex",alignItems:"center",gap:4,paddingLeft:12,flexShrink:0}}>
