@@ -234,9 +234,15 @@ function AddRepModal({ cities, onSave, onClose }) {
 function PhaseModal({ phase, onSave, onClose, onDelete, isOnly }) {
   const [label,setLabel]=useState(phase?phase.label:"");
   const [color,setColor]=useState(phase?phase.color:PHASE_COLORS[0]);
+  const [note,setNote]=useState(phase?phase.note||"":"");
   return (
     <Modal title={phase?"Edit phase":"New phase"} onClose={onClose}>
       <Field label="Phase name (e.g. Phase 1 — July)" value={label} onChange={setLabel} placeholder="Phase 1 — July"/>
+      <div style={{marginBottom:12}}>
+        <div style={{fontSize:12,color:"#666",marginBottom:4}}>Note (optional)</div>
+        <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="Add context, goals, or timeline notes..." rows={3}
+          style={{width:"100%",border:"1px solid #d1d5db",borderRadius:6,padding:"7px 10px",fontSize:13,outline:"none",resize:"vertical",fontFamily:"inherit"}}/>
+      </div>
       <div style={{marginBottom:16}}>
         <div style={{fontSize:12,color:"#666",marginBottom:8}}>Color</div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -251,7 +257,7 @@ function PhaseModal({ phase, onSave, onClose, onDelete, isOnly }) {
         ) : <span/>}
         <div style={{display:"flex",gap:8}}>
           <button onClick={onClose} style={{padding:"7px 16px",borderRadius:6,border:"1px solid #d1d5db",background:"#fff",fontSize:13}}>Cancel</button>
-          <button onClick={()=>label&&onSave({label,color})} style={{padding:"7px 16px",borderRadius:6,border:"none",background:"#1e293b",color:"#fff",fontSize:13}}>{phase?"Save":"Create"}</button>
+          <button onClick={()=>label&&onSave({label,color,note})} style={{padding:"7px 16px",borderRadius:6,border:"none",background:"#1e293b",color:"#fff",fontSize:13}}>{phase?"Save":"Create"}</button>
         </div>
       </div>
     </Modal>
@@ -649,8 +655,8 @@ function App() {
   const showToast=(msg,type="ok")=>{setToast({msg,type});setTimeout(()=>setToast(null),3000);};
 
   /* Phase management */
-  const handleCreatePhase=({label,color})=>{const p={id:uid(),label,color,org:clone(BASE_ORG)};setPhases(prev=>[...prev,p]);setActiveId(p.id);setPhaseModal(null);};
-  const handleEditPhase=({label,color})=>{setPhases(prev=>prev.map(p=>p.id===phaseModal.phase.id?{...p,label,color}:p));setPhaseModal(null);};
+  const handleCreatePhase=({label,color,note})=>{const p={id:uid(),label,color,note:note||"",org:clone(BASE_ORG)};setPhases(prev=>[...prev,p]);setActiveId(p.id);setPhaseModal(null);};
+  const handleEditPhase=({label,color,note})=>{setPhases(prev=>prev.map(p=>p.id===phaseModal.phase.id?{...p,label,color,note:note||""}:p));setPhaseModal(null);};
   const handleDeletePhase=()=>{const rem=phases.filter(p=>p.id!==phaseModal.phase.id);setPhases(rem);setActiveId(rem[0].id);setPhaseModal(null);};
   const handleDuplicate=({label,color})=>{const src=phases.find(p=>p.id===dupModal);if(!src)return;const p={id:uid(),label,color,org:clone(src.org)};setPhases(prev=>[...prev,p]);setActiveId(p.id);setDupModal(null);};
 
@@ -737,6 +743,9 @@ function App() {
                   style={{padding:"0 16px",height:"100%",border:"none",borderBottom:activeId===phase.id?"3px solid "+phase.color:"3px solid transparent",background:isOver?"#f8fafc":"none",fontSize:13,fontWeight:activeId===phase.id?600:400,color:activeId===phase.id?phase.color:"#64748b",cursor:"grab",whiteSpace:"nowrap",transition:"all 0.15s",display:"flex",alignItems:"center",gap:7,userSelect:"none"}}>
                   <span style={{width:8,height:8,borderRadius:"50%",background:phase.color,display:"inline-block",flexShrink:0}}/>
                   {phase.label}
+                  <span style={{fontSize:10,fontWeight:600,background:activeId===phase.id?phase.color:"#e2e8f0",color:activeId===phase.id?"#fff":"#64748b",borderRadius:10,padding:"1px 7px",marginLeft:2,flexShrink:0}}>
+                    {countReps(phase.org)}
+                  </span>
                 </button>
                 {activeId===phase.id&&<button onClick={()=>setPhaseModal({phase})} style={{background:"none",border:"none",cursor:"pointer",padding:"0 4px 0 0",color:"#94a3b8",fontSize:13,display:"flex",alignItems:"center"}} title="Edit phase">⚙</button>}
               </div>
@@ -758,18 +767,35 @@ function App() {
       </div>
 
       {/* Banner */}
-      <div style={{padding:"8px 20px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-        <span style={{width:10,height:10,borderRadius:"50%",background:activePhase.color,display:"inline-block"}}/>
-        <span style={{fontSize:13,fontWeight:500,color:"#334155"}}>{activePhase.label}</span>
-        <button onClick={()=>setPhaseModal({phase:activePhase})} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:13,padding:"0 2px",lineHeight:1}}>✎</button>
-        <span style={{fontSize:11,color:"#94a3b8"}}>— {countReps(activePhase.org)} reps across {countCities(activePhase.org)} cities</span>
-        {/* Zoom */}
-        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}>
-          <span style={{fontSize:11,color:"#94a3b8",marginRight:4}}>Ctrl+scroll to zoom · Shift+scroll to pan</span>
-          <button onClick={()=>setZoom(z=>Math.max(0.3,+(z-0.1).toFixed(1)))} style={{width:28,height:28,borderRadius:6,border:"1px solid #e2e8f0",background:"#fff",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#475569",fontWeight:500}}>−</button>
-          <span style={{fontSize:12,color:"#64748b",minWidth:38,textAlign:"center"}}>{Math.round(zoom*100)}%</span>
-          <button onClick={()=>setZoom(z=>Math.min(2,+(z+0.1).toFixed(1)))} style={{width:28,height:28,borderRadius:6,border:"1px solid #e2e8f0",background:"#fff",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#475569",fontWeight:500}}>+</button>
-          <button onClick={()=>setZoom(1)} style={{fontSize:11,color:"#64748b",background:"none",border:"1px solid #e2e8f0",borderRadius:5,padding:"3px 8px",cursor:"pointer",marginLeft:2}}>Reset</button>
+      <div style={{padding:"8px 20px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <span style={{width:10,height:10,borderRadius:"50%",background:activePhase.color,display:"inline-block",flexShrink:0}}/>
+          <span style={{fontSize:13,fontWeight:500,color:"#334155"}}>{activePhase.label}</span>
+          <button onClick={()=>setPhaseModal({phase:activePhase})} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:13,padding:"0 2px",lineHeight:1}}>✎</button>
+          <span style={{fontSize:11,color:"#94a3b8"}}>— {countReps(activePhase.org)} reps across {countCities(activePhase.org)} cities</span>
+          {/* Zoom */}
+          <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+            <span style={{fontSize:11,color:"#94a3b8",marginRight:4}}>Ctrl+scroll to zoom · Shift+scroll to pan</span>
+            <button onClick={()=>setZoom(z=>Math.max(0.3,+(z-0.1).toFixed(1)))} style={{width:28,height:28,borderRadius:6,border:"1px solid #e2e8f0",background:"#fff",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#475569",fontWeight:500}}>−</button>
+            <span style={{fontSize:12,color:"#64748b",minWidth:38,textAlign:"center"}}>{Math.round(zoom*100)}%</span>
+            <button onClick={()=>setZoom(z=>Math.min(2,+(z+0.1).toFixed(1)))} style={{width:28,height:28,borderRadius:6,border:"1px solid #e2e8f0",background:"#fff",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#475569",fontWeight:500}}>+</button>
+            <button onClick={()=>setZoom(1)} style={{fontSize:11,color:"#64748b",background:"none",border:"1px solid #e2e8f0",borderRadius:5,padding:"3px 8px",cursor:"pointer",marginLeft:2}}>Reset</button>
+          </div>
+        </div>
+        {/* Inline note */}
+        <div style={{marginTop:5,display:"flex",alignItems:"flex-start",gap:6}}>
+          <span style={{fontSize:10,fontWeight:500,color:"#94a3b8",letterSpacing:"0.05em",textTransform:"uppercase",marginTop:3,flexShrink:0}}>Note</span>
+          <input
+            value={activePhase.note||""}
+            onChange={e=>{
+              const val=e.target.value;
+              setPhases(prev=>prev.map(p=>p.id===activeId?{...p,note:val}:p));
+            }}
+            placeholder="Add context, goals or timeline for this phase..."
+            style={{flex:1,fontSize:12,color:"#475569",background:"transparent",border:"none",outline:"none",padding:"2px 0",borderBottom:"1px dashed transparent",fontFamily:"inherit"}}
+            onFocus={e=>e.target.style.borderBottomColor="#cbd5e1"}
+            onBlur={e=>e.target.style.borderBottomColor="transparent"}
+          />
         </div>
       </div>
 
